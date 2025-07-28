@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Expense Tracker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f0f0;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    h1 {
+      background-color: #00796b;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      display: inline-block;
+      margin-bottom: 25px;
+      box-shadow: 0 2px 6px rgba(0, 121, 107, 0.4);
+      transition: background-color 0.3s ease, transform 0.3s ease;
+    }
+
+    h1:hover {
+      background-color: #004d40;
+      transform: scale(1.05);
+    }
+
+    .section {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 20px;
+      padding: 10px;
+      background: #f7f7f7;
+      border-radius: 6px;
+    }
+
+    input, button, select {
+      padding: 10px;
+      font-size: 1em;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    .clear-button {
+      background-color: #d9534f;
+      color: white;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+
+    .clear-button:hover {
+      background-color: #c9302c;
+      transform: scale(1.05);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid #ccc;
+      text-align: center;
+    }
+
+    #chartType {
+      margin-bottom: 10px;
+    }
+
+    #financeChart {
+      max-width: 400px;
+      margin: 0 auto;
+    }
+
+    .logout-btn {
+      background-color: #777;
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      font-size: 0.85em;
+      border-radius: 4px;
+      margin-left: 10px;
+      cursor: pointer;
+    }
+
+    .logout-btn:hover {
+      background-color: #555;
+    }
+
+    .user-info {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .user-info p {
+      margin: 0;
+    }
+
+    .flex-display {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      margin-top: 20px;
+    }
+
+    .chart-container, .expense-table {
+      flex: 1;
+      min-width: 300px;
+      background: #f9f9f9;
+      padding: 15px;
+      border-radius: 6px;
+    }
+    
+  </style>
+</head>
+<body>
+  
+  <div class="container">
+    <h1>Expense Tracker</h1>
+
+    <div class="user-info">
+      <p><strong>User:</strong> {{ session.get('name') }}</p>
+      <p><strong>Age:</strong> {{ session.get('age') }}</p>
+      <p><strong>Job:</strong> {{ session.get('job') }}</p>
+      <form action="/logout" method="POST" style="display:inline;">
+        <button type="submit" class="logout-btn">Logout</button>
+      </form>
+    </div>
+    
+
+    <!-- Salary Section -->
+    <div class="section">
+      <form action="/set-salary" method="POST">
+        <input type="number" step="0.01" name="salary" placeholder="Enter Monthly Salary" required>
+        <button type="submit">Set Salary</button>
+      </form>
+      <form action="/clear-salary" method="POST" onsubmit="return confirm('Clear monthly salary?');">
+        <button type="submit" class="clear-button">Clear Salary</button>
+      </form>
+    </div>
+    <!-- Monthly Overview -->
+    <div class="overview">
+      <h2>Monthly Overview</h2>
+      <ul style="list-style-type:none; padding-left:0;">
+        <li><strong>Monthly Salary:</strong> ₹{{ "%.2f"|format(monthly_salary) }}</li>
+        <li><strong>Total Expenses:</strong> ₹{{ "%.2f"|format(monthly_expense) }}</li>
+        <li>
+          <strong>Remaining Balance:</strong>
+          <span style="color: {{ 'red' if balance < 0 else 'green' }}">
+            ₹{{ "%.2f"|format(balance) }}
+          </span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Expense Section -->
+    <div class="section">
+      <form action="/add" method="POST">
+        <input type="number" name="amount" placeholder="Amount" required step="0.01">
+        <select name="category" required>
+          <option value="" disabled selected>Select Category</option>
+          <option>Food</option>
+          <option>Transport</option>
+          <option>Rent</option>
+          <option>Entertainment</option>
+          <option>Other</option>
+        </select>
+        <input type="date" name="date" id="dateInput">
+        <button type="submit">Add Expense</button>
+      </form>
+
+      <form action="/clear" method="POST" onsubmit="return confirm('Clear all expenses?');">
+        <button type="submit" class="clear-button">Clear Expenses</button>
+      </form>
+    </div>
+
+    <!-- Flex layout: Chart + Expenses Table -->
+    <div class="flex-display">
+      <!-- Financial Chart -->
+      <div class="chart-container">
+        <h2>Financial Chart</h2>
+        <label for="chartType">Select Chart Type:</label>
+        <select id="chartType">
+          <option value="bar">Bar</option>
+          <option value="pie">Pie</option>
+          <option value="line">Line</option>
+        </select>
+        <canvas id="financeChart" height="250"></canvas>
+      </div>
+
+      <!-- All Expenses Table -->
+      <div class="expense-table">
+        <h2>All Expenses</h2>
+        <div style="overflow-x:auto;">
+          <table>
+            <tr><th>Amount</th><th>Category</th><th>Date</th></tr>
+            {% for e in expenses %}
+            <tr>
+              <td>₹{{ "%.2f"|format(e[1]) }}</td>
+              <td>{{ e[2] }}</td>
+              <td>{{ e[3] }}</td>
+            </tr>
+            {% endfor %}
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      const ctx = document.getElementById('financeChart').getContext('2d');
+      let chartType = document.getElementById('chartType').value;
+
+      const data = {
+        labels: ['Salary', 'Expenses', 'Balance'],
+        datasets: [{
+          label: 'Amount in ₹',
+          data: [
+            {{ monthly_salary|round(2) }},
+            {{ monthly_expense|round(2) }},
+            {{ balance|round(2) }}
+          ],
+          backgroundColor: ['#4caf50', '#f44336', '#2196f3'],
+          borderRadius: 8
+        }]
+      };
+
+      let chartInstance = new Chart(ctx, {
+        type: chartType,
+        data: data,
+        options: getChartOptions(chartType)
+      });
+
+      document.getElementById('chartType').addEventListener('change', function () {
+        chartType = this.value;
+        chartInstance.destroy();
+        chartInstance = new Chart(ctx, {
+          type: chartType,
+          data: data,
+          options: getChartOptions(chartType)
+        });
+      });
+
+      function getChartOptions(type) {
+        return {
+          responsive: true,
+          plugins: {
+            legend: {
+              display: type !== 'bar'
+            },
+            title: {
+              display: true,
+              text: 'Monthly Summary'
+            }
+          },
+          scales: type === 'bar' || type === 'line' ? {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: value => '₹' + value
+              }
+            }
+          } : {}
+        };
+      }
+
+      document.getElementById('dateInput').valueAsDate = new Date();
+    </script>
+  </div>
+</body>
+</html>
